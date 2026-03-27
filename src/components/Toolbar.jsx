@@ -32,9 +32,11 @@ function Btn({ label, active, onClick }) {
 export default function Toolbar() {
   const {
     cameraPreset, setCameraPreset,
+    showAmmo, toggleAmmo,
     showMannequin, toggleMannequin,
     showWireframe, toggleWireframe,
     showMedallion, toggleMedallion,
+    showWheels, toggleWheels,
     showAxes, toggleAxes,
     bgShade, setBgShade,
   } = useStore();
@@ -51,7 +53,7 @@ export default function Toolbar() {
         fontSize: '.72rem', fontWeight: 700, letterSpacing: '.09em',
         marginRight: 16,
       }}>
-        PARKA STUDIO
+        GOWN STUDIO
       </div>
 
       {/* Separator */}
@@ -68,9 +70,11 @@ export default function Toolbar() {
       <div style={{ width: 1, height: 20, background: 'rgba(0,180,255,.15)', margin: '0 8px' }} />
 
       {/* Toggles */}
+      <Btn label="BULLETS" active={showAmmo} onClick={toggleAmmo} />
       <Btn label="MANNEQUIN" active={showMannequin} onClick={toggleMannequin} />
       <Btn label="WIREFRAME" active={showWireframe} onClick={toggleWireframe} />
       <Btn label="MEDALLION" active={showMedallion} onClick={toggleMedallion} />
+      <Btn label="WHEELS" active={showWheels} onClick={toggleWheels} />
       <Btn label="AXES" active={showAxes} onClick={toggleAxes} />
 
       <div style={{ width: 1, height: 20, background: 'rgba(0,180,255,.15)', margin: '0 8px' }} />
@@ -89,7 +93,7 @@ export default function Toolbar() {
       <div className="flex-1" />
 
       <div style={{ color: 'rgba(130,190,255,.4)', fontSize: '.6rem', fontFamily: 'Rajdhani,sans-serif' }}>
-        Sea Urchin Parka Studio v3.0
+        Bullet Gown Studio v1.0
       </div>
     </div>
   );

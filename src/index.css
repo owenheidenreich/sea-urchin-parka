@@ -25,3 +25,19 @@ select {
   outline: none; cursor: pointer;
 }
 select:focus { border-color: #00c8ff; }
+
+/* ── Responsive: desktop vs mobile/iPad ── */
+/* Desktop (≥900px): show 3-column grid, hide mobile tabs */
+.mobile-layout { display: none !important; }
+.desktop-layout { display: grid !important; }
+
+@media (max-width: 899px) {
+  .desktop-layout { display: none !important; }
+  .mobile-layout { display: flex !important; }
+}
+
+/* Larger touch targets on touch devices */
+@media (pointer: coarse) {
+  input[type=range] { height: 8px; }
+  input[type=range]::-webkit-slider-thumb { width: 22px; height: 22px; }
+}

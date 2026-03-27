@@ -1,15 +1,15 @@
 /**
  * Viewport.jsx — Three.js WebGL scene with OrbitControls.
- * Renders mannequin + parka body + hood + sleeves + details + ammunition.
+ * Renders mannequin + gown body + train + details + wheels + ammunition.
  */
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { buildMannequin } from '../engine/Mannequin.js';
-import { buildParkaBody } from '../engine/ParkaBody.js';
-import { buildParkaHood } from '../engine/ParkaHood.js';
-import { buildParkaSleeves } from '../engine/ParkaSleeves.js';
-import { buildParkaDetails } from '../engine/ParkaDetails.js';
+import { buildGownMannequin } from '../engine/GownMannequin.js';
+import { buildGownBody } from '../engine/GownBody.js';
+import { buildGownTrain } from '../engine/GownTrain.js';
+import { buildGownDetails } from '../engine/GownDetails.js';
+import { buildGownWheels } from '../engine/GownWheels.js';
 import { buildAmmoInstances } from '../engine/AmmoPlacement.js';
 import { buildFlowerMedallion } from '../engine/FlowerMedallion.js';
 import { useStore } from '../store/store.js';
@@ -17,12 +17,12 @@ import { THEMES } from '../utils/themes.js';
 import { BG_SHADES } from './Toolbar.jsx';
 
 const PRESETS = {
-  FRONT: { pos: [0, 10, 75],  tgt: [0, 10, 0] },
-  BACK:  { pos: [0, 10, -75], tgt: [0, 10, 0] },
-  LEFT:  { pos: [-75, 10, 0], tgt: [0, 10, 0] },
-  RIGHT: { pos: [75, 10, 0],  tgt: [0, 10, 0] },
-  TOP:   { pos: [0, 90, 1],   tgt: [0, 10, 0] },
-  '3/4': { pos: [50, 30, 50], tgt: [0, 10, 0] },
+  FRONT: { pos: [0, 5, 80],   tgt: [0, 0, 0] },
+  BACK:  { pos: [0, 5, -80],  tgt: [0, 0, 0] },
+  LEFT:  { pos: [-80, 5, 0],  tgt: [0, 0, 0] },
+  RIGHT: { pos: [80, 5, 0],   tgt: [0, 0, 0] },
+  TOP:   { pos: [0, 90, 1],   tgt: [0, 0, 0] },
+  '3/4': { pos: [55, 25, 55], tgt: [0, 0, 0] },
 };
 
 export default function Viewport() {
@@ -33,19 +33,22 @@ export default function Viewport() {
   const ctrlRef      = useRef(null);
   const rafRef       = useRef(null);
   const mannequinRef = useRef(null);
-  const parkaRef     = useRef(null);
+  const garmentRef   = useRef(null);
   const ammoRef      = useRef(null);
   const medallionRef = useRef(null);
+  const wheelsRef    = useRef(null);
   const axesRef      = useRef(null);
+  const groundRef    = useRef(null);
 
   const {
     showMannequin, showWireframe, cameraPreset,
     ammoCount, ammoSizeMin, ammoSizeMax, ammoSpread, flatRatio, layerCount, themeKey,
-    hoodDepth, bgShade,
+    bodiceHeight, skirtFlare, slitHeight, slitWidth,
+    trainLength, trainWidth, wheelCount, wheelSize,
+    waistWidth, bustWidth, hipWidth, hemHeight,
+    bgShade,
     medallionScale, medallionX, medallionY,
   } = useStore();
-
-  const groundRef = useRef(null);
 
   // ── Scene init ──
   useEffect(() => {
@@ -82,8 +85,10 @@ export default function Viewport() {
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
     controls.minDistance = 20;
-    controls.maxDistance = 180;
-    controls.target.set(0, 10, 0);
+    controls.maxDistance = 200;
+    controls.target.set(0, 0, 0);
+    controls.enablePan = true;
+    controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
     controls.update();
     ctrlRef.current = controls;
 
@@ -98,20 +103,40 @@ export default function Viewport() {
     fill.position.set(40, 0, -20);
     scene.add(fill);
 
-    const rim = new THREE.DirectionalLight(0x4488ff, 0.55);
+    const rim = new THREE.DirectionalLight(0x4488ff, 0.85);
     rim.position.set(0, 50, -50);
     scene.add(rim);
 
-    scene.add(new THREE.AmbientLight(0x182030, 0.9));
+    // Under-light for fabric translucency/subsurface glow
+    const under = new THREE.DirectionalLight(0x6644aa, 0.3);
+    under.position.set(0, -20, 30);
+    scene.add(under);
 
-    // ── Ground plane (subtle) ──
-    const groundGeo = new THREE.PlaneGeometry(200, 200);
+    scene.add(new THREE.AmbientLight(0x182030, 0.5));
+
+    // ── Environment for fabric reflections/transmission ──
+    const pmremGen = new THREE.PMREMGenerator(renderer);
+    pmremGen.compileEquirectangularShader();
+    const envScene = new THREE.Scene();
+    envScene.background = new THREE.Color(0x182848);
+    // Add colored gradient spheres to give fabric something to reflect
+    const envSphereGeo = new THREE.SphereGeometry(100, 16, 16);
+    const envTop = new THREE.Mesh(envSphereGeo, new THREE.MeshBasicMaterial({
+      color: 0x2244aa, side: THREE.BackSide,
+    }));
+    envScene.add(envTop);
+    const envRT = pmremGen.fromScene(envScene, 0.04);
+    scene.environment = envRT.texture;
+    pmremGen.dispose();
+
+    // ── Ground plane ──
+    const groundGeo = new THREE.PlaneGeometry(300, 300);
     const groundMat = new THREE.MeshStandardMaterial({
       color: 0x0a0e1a, roughness: 1,
     });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -32;
+    ground.position.y = -33;
     ground.receiveShadow = true;
     scene.add(ground);
     groundRef.current = ground;
@@ -157,7 +182,10 @@ export default function Viewport() {
     if (!sceneRef.current) return;
     rebuildScene(sceneRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ammoCount, ammoSizeMin, ammoSizeMax, ammoSpread, flatRatio, layerCount, themeKey, hoodDepth, medallionScale, medallionX, medallionY]);
+  }, [ammoCount, ammoSizeMin, ammoSizeMax, ammoSpread, flatRatio, layerCount, themeKey,
+      bodiceHeight, skirtFlare, slitHeight, slitWidth, trainLength, trainWidth,
+      wheelCount, wheelSize, waistWidth, bustWidth, hipWidth, hemHeight,
+      medallionScale, medallionX, medallionY]);
 
   // ── Mannequin visibility ──
   useEffect(() => {
@@ -170,10 +198,28 @@ export default function Viewport() {
     if (medallionRef.current) medallionRef.current.visible = showMedallion;
   }, [showMedallion]);
 
+  // ── Ammo visibility ──
+  const showAmmo = useStore((s) => s.showAmmo);
+  useEffect(() => {
+    if (ammoRef.current) ammoRef.current.visible = showAmmo;
+  }, [showAmmo]);
+
+  // ── Wheels visibility ──
+  const showWheels = useStore((s) => s.showWheels);
+  useEffect(() => {
+    if (wheelsRef.current) wheelsRef.current.visible = showWheels;
+  }, [showWheels]);
+
+  // ── Axes visibility ──
+  const showAxes = useStore((s) => s.showAxes);
+  useEffect(() => {
+    if (axesRef.current) axesRef.current.visible = showAxes;
+  }, [showAxes]);
+
   // ── Wireframe toggle ──
   useEffect(() => {
-    if (!parkaRef.current) return;
-    parkaRef.current.traverse((child) => {
+    if (!garmentRef.current) return;
+    garmentRef.current.traverse((child) => {
       if (child.isMesh && child.material) child.material.wireframe = showWireframe;
     });
   }, [showWireframe]);
@@ -187,12 +233,6 @@ export default function Viewport() {
     if (groundRef.current) groundRef.current.material.color.copy(color);
   }, [bgShade]);
 
-  // ── Axes visibility ──
-  const showAxes = useStore((s) => s.showAxes);
-  useEffect(() => {
-    if (axesRef.current) axesRef.current.visible = showAxes;
-  }, [showAxes]);
-
   // ── Camera preset ──
   useEffect(() => {
     if (!camRef.current || !ctrlRef.current) return;
@@ -202,45 +242,78 @@ export default function Viewport() {
   }, [cameraPreset]);
 
   function rebuildScene(scene) {
-    // Remove old parka + ammo
-    if (parkaRef.current) {
-      scene.remove(parkaRef.current);
-      parkaRef.current.traverse((c) => {
+    // Remove old garment + ammo + wheels
+    if (garmentRef.current) {
+      scene.remove(garmentRef.current);
+      garmentRef.current.traverse((c) => {
         if (c.geometry) c.geometry.dispose();
         if (c.material) c.material.dispose();
       });
     }
     if (ammoRef.current) {
       scene.remove(ammoRef.current);
-      ammoRef.current.geometry.dispose();
-      ammoRef.current.material.dispose();
+      ammoRef.current.geometry?.dispose();
+      ammoRef.current.material?.dispose();
+    }
+    if (wheelsRef.current) {
+      scene.remove(wheelsRef.current);
+      wheelsRef.current.traverse((c) => {
+        if (c.geometry) c.geometry.dispose();
+        if (c.material) c.material.dispose();
+      });
     }
     if (mannequinRef.current) scene.remove(mannequinRef.current);
 
     // Mannequin
-    const mannequin = buildMannequin();
+    const mannequin = buildGownMannequin();
     mannequin.visible = useStore.getState().showMannequin;
     scene.add(mannequin);
     mannequinRef.current = mannequin;
 
-    // Parka group
-    const parka = new THREE.Group();
-    parka.name = 'parka';
+    const state = useStore.getState();
 
-    const body = buildParkaBody();
-    parka.add(body);
+    // Gown group
+    const gown = new THREE.Group();
+    gown.name = 'gown';
 
-    const hood = buildParkaHood(useStore.getState().hoodDepth);
-    parka.add(hood);
+    const body = buildGownBody({
+      bodiceHeight: state.bodiceHeight,
+      skirtFlare: state.skirtFlare,
+      slitHeight: state.slitHeight,
+      slitWidth: state.slitWidth,
+      waistWidth: state.waistWidth,
+      bustWidth: state.bustWidth,
+      hipWidth: state.hipWidth,
+      hemHeight: state.hemHeight,
+    });
+    gown.add(body);
 
-    const sleeves = buildParkaSleeves();
-    parka.add(sleeves);
+    const train = buildGownTrain({
+      trainLength: state.trainLength,
+      trainWidth: state.trainWidth,
+      skirtFlare: state.skirtFlare,
+    });
+    gown.add(train);
 
-    const details = buildParkaDetails();
-    parka.add(details);
+    const details = buildGownDetails({
+      bodiceHeight: state.bodiceHeight,
+      skirtFlare: state.skirtFlare,
+    });
+    gown.add(details);
 
-    scene.add(parka);
-    parkaRef.current = parka;
+    scene.add(gown);
+    garmentRef.current = gown;
+
+    // Wheels
+    const wheels = buildGownWheels({
+      wheelCount: state.wheelCount,
+      wheelSize: state.wheelSize,
+      skirtFlare: state.skirtFlare,
+      trainLength: state.trainLength,
+    });
+    wheels.visible = state.showWheels;
+    scene.add(wheels);
+    wheelsRef.current = wheels;
 
     // Medallion
     if (medallionRef.current) {
@@ -250,21 +323,19 @@ export default function Viewport() {
         if (c.material) c.material.dispose();
       });
     }
-    const mState = useStore.getState();
     const medallion = buildFlowerMedallion();
-    medallion.scale.setScalar(mState.medallionScale);
-    medallion.position.set(mState.medallionX, mState.medallionY, 9.8);
-    medallion.visible = mState.showMedallion;
+    medallion.scale.setScalar(state.medallionScale);
+    medallion.position.set(state.medallionX, state.medallionY, 9.8);
+    medallion.visible = state.showMedallion;
     scene.add(medallion);
     medallionRef.current = medallion;
 
     // Force world matrix update before sampling
-    parka.updateMatrixWorld(true);
+    gown.updateMatrixWorld(true);
 
     // Ammunition
-    const T = THEMES[useStore.getState().themeKey] || THEMES.brass;
-    const state = useStore.getState();
-    const ammoResult = buildAmmoInstances(parka, {
+    const T = THEMES[state.themeKey] || THEMES.brass;
+    const ammoResult = buildAmmoInstances(gown, {
       count: state.ammoCount,
       sizeMin: state.ammoSizeMin,
       sizeMax: state.ammoSizeMax,
@@ -275,6 +346,7 @@ export default function Viewport() {
     });
 
     if (ammoResult) {
+      ammoResult.mesh.visible = state.showAmmo;
       scene.add(ammoResult.mesh);
       ammoRef.current = ammoResult.mesh;
     }
@@ -297,24 +369,19 @@ function buildAxesHelper() {
   ];
 
   for (const { dir, color, label } of axes) {
-    // Arrow shaft
     const points = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(...dir)];
     const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
     const lineMat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
     group.add(new THREE.Line(lineGeo, lineMat));
 
-    // Arrowhead cone
     const coneGeo = new THREE.ConeGeometry(0.5, 1.5, 8);
     const coneMat = new THREE.MeshBasicMaterial({ color });
     const cone = new THREE.Mesh(coneGeo, coneMat);
     cone.position.set(...dir);
-    // Orient cone to point along the axis
     if (label === 'X') cone.rotation.z = -Math.PI / 2;
     else if (label === 'Z') cone.rotation.x = Math.PI / 2;
-    // Y is default (cone points up)
     group.add(cone);
 
-    // Label sprite
     const canvas = document.createElement('canvas');
     canvas.width = 64; canvas.height = 64;
     const ctx = canvas.getContext('2d');
@@ -336,12 +403,10 @@ function buildAxesHelper() {
     group.add(sprite);
   }
 
-  // Origin sphere
   const originGeo = new THREE.SphereGeometry(0.4, 10, 10);
   const originMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   group.add(new THREE.Mesh(originGeo, originMat));
 
-  // Position at model center
   group.position.set(0, 0, 0);
   return group;
 }
