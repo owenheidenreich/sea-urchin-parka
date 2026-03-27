@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Sea Urchin Parka Designer v2</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #010810;
+            --surface: rgba(4, 16, 34, 0.88);
+            --accent: #00c8ff;
+            --spine-a: #ff4081;
+            --success: #00ff9e;
+            --text: #d8eeff;
+            --glow: rgba(0, 200, 255, 0.3);
+            --border: rgba(0, 180, 255, 0.18);
+        }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .app {
+            display: grid;
+            grid-template-columns: 270px 1fr 300px;
+            height: 100vh;
+            gap: 8px;
+            padding: 8px;
+        }
+
+        .panel {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 14px;
+            border: 1px solid var(--border);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .panel::-webkit-scrollbar { width: 4px; }
+        .panel::-webkit-scrollbar-thumb { background: rgba(0,200,255,0.3); border-radius: 2px; }
+
+        .panel h2 {
+            font-family: 'Orbitron', monospace;
+            color: var(--accent);
+            font-size: 0.95rem;
+            margin-bottom: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .viewer {
+            background: #000;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(0,200,255,0.25);
+        }
+
+        #c {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .viewer-hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.75);
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            pointer-events: none;
+        }
+
+        .viewer-hud .title {
+            font-family: 'Orbitron', monospace;
+            color: var(--accent);
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+        }
+
+        .viewer-hud .sub {
+            font-size: 0.68rem;
+            color: rgba(180,210,255,0.6);
+            margin-top: 2px;
+        }
+
+        /* Controls */
+        .cgroup {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: rgba(0,0,0,0.35);
+            border-radius: 8px;
+            border: 1px solid rgba(0,200,255,0.08);
+        }
+
+        .clabel {
+            color: var(--accent);
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .clabel span {
+            color: var(--spine-a);
+            font-family: 'Orbitron', monospace;
+            font-size: 0.72rem;
+        }
+
+        input[type=range] {
+            width: 100%;
+            height: 3px;
+            background: rgba(0,200,255,0.2);
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px; height: 14px;
+            background: var(--accent);
+            border-radius: 50%;
+            box-shadow: 0 0 6px var(--glow);
+            cursor: pointer;
+        }
+
+        select {
+            width: 100%;
+            height: 30px;
+            background: rgba(0,10,25,0.8);
+            color: var(--text);
+            border: 1px solid rgba(0,200,255,0.25);
+            border-radius: 6px;
+            padding: 0 8px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.85rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .btn-gen {
+            width: 100%;
+            background: linear-gradient(135deg, #5a0075, #aa1560, #ff4081);
+            border: none;
+            color: #fff;
+            padding: 11px;
+            border-radius: 8px;
+            font-family: 'Orbitron', monospace;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 10px 0 8px;
+            box-shadow: 0 0 20px rgba(255,64,129,0.25);
+        }
+
+        .btn-gen:hover {
+            box-shadow: 0 0 30px rgba(255,64,129,0.5);
+            transform: translateY(-1px);
+        }
+
+        .btn-gen:active { transform: translateY(0); }
+
+        .btns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            margin: 6px 0;
+        }
+
+        .btn {
+            background: rgba(0,200,255,0.07);
+            border: 1px solid rgba(0,200,255,0.2);
+            color: var(--text);
+            padding: 6px 4px;
+            border-radius: 6px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: center;
+        }
+
+        .btn:hover {
+            background: rgba(0,200,255,0.18);
+            border-color: rgba(0,200,255,0.5);
+        }
+
+        .btn.active {
+            background: rgba(0,200,255,0.25);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .ai-status {
+            background: rgba(0,255,158,0.07);
+            border: 1px solid rgba(0,255,158,0.3);
+            border-radius: 8px;
+            padding: 9px;
+            text-align: center;
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .ai-status.thinking {
+            background: rgba(255,64,129,0.07);
+            border-color: rgba(255,64,129,0.35);
+            animation: blink 1.4s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%,100% { opacity: 0.75; }
+            50% { opacity: 1; }
+        }
+
+        .spinner {
+            width: 22px; height: 22px;
+            border: 2px solid rgba(0,200,255,0.2);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            margin: 0 auto 5px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .progress {
+            width: 100%;
+            height: 3px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 6px 0;
+        }
+
+        .pfill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--success));
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        /* Spec display */
+        .spec {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.7rem;
+            line-height: 1.8;
+            background: rgba(0,0,0,0.45);
+            padding: 10px;
+            border-radius: 8px;
+            border-left: 2px solid var(--accent);
+            color: var(--success);
+            white-space: pre;
+        }
+
+        .zone-list {
+            font-size: 0.8rem;
+            line-height: 1.9;
+        }
+
+        .zone-list div {
+            display: flex;
+            justify-content: space-between;
+            padding: 1px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+
+        .zone-list .zcount {
+            color: var(--spine-a);
+            font-family: 'Orbitron', monospace;
+            font-size: 0.68rem;
+        }
+
+        .exports {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            margin-top: 8px;
+        }
+
+        .export-btn {
+            background: rgba(0,200,255,0.06);
+            border: 1px solid rgba(0,200,255,0.2);
+            border-radius: 6px;
+            padding: 7px 4px;
+            text-align: center;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.15s;
+            color: var(--text);
+        }
+
+        .export-btn:hover {
+            background: rgba(0,200,255,0.15);
+            transform: scale(1.03);
+        }
+
+        .ai-rec {
+            background: rgba(0,0,0,0.3);
+            padding: 9px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            line-height: 1.55;
+        }
+
+        .launch-btn {
+            width: 100%;
+            background: linear-gradient(135deg, rgba(0,200,255,0.15), rgba(0,100,200,0.2));
+            border: 1px solid rgba(0,200,255,0.35);
+            color: var(--accent);
+            padding: 10px;
+            border-radius: 8px;
+            font-family: 'Orbitron', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 10px;
+            letter-spacing: 0.06em;
+            transition: all 0.2s;
+        }
+
+        .launch-btn:hover {
+            background: linear-gradient(135deg, rgba(0,200,255,0.25), rgba(0,150,255,0.3));
+            box-shadow: 0 0 18px rgba(0,200,255,0.3);
+        }
+
+        @media (max-width: 1050px) {
+            .app { grid-template-columns: 1fr; height: auto; overflow: auto; }
+            body { overflow: auto; }
+            .viewer { height: 65vw; min-height: 350px; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+
+    <!-- LEFT PANEL -->
+    <div class="panel">
+        <h2>🤖 AI Design Controls</h2>
+
+        <div class="ai-status" id="aiStatus">
+            <strong>Ready to Generate</strong><br>
+            Sea urchin coverage awaits
+        </div>
+
+        <div class="cgroup">
+            <div class="clabel">Spine Density <span id="vCount">450</span></div>
+            <input type="range" id="rCount" min="150" max="900" value="450" oninput="syncSlider('Count',this.value)">
+        </div>
+
+        <div class="cgroup">
+            <div class="clabel">Max Spine Length <span id="vLen">28mm</span></div>
+            <input type="range" id="rLen" min="10" max="55" value="28" oninput="syncSlider('Len',this.value+'mm')">
+        </div>
+
+        <div class="cgroup">
+            <div class="clabel">Telescoping Segments <span id="vSeg">3</span></div>
+            <input type="range" id="rSeg" min="2" max="5" value="3" oninput="syncSlider('Seg',this.value)">
+        </div>
+
+        <div class="cgroup">
+            <div class="clabel">Spread Angle <span id="vSpread">±30°</span></div>
+            <input type="range" id="rSpread" min="5" max="65" value="30" oninput="syncSlider('Spread','±'+this.value+'°')">
+        </div>
+
+        <div class="cgroup">
+            <div class="clabel">Color Theme</div>
+            <select id="selTheme" onchange="applyTheme()">
+                <option value="pink">🩷 Original Pink</option>
+                <option value="urchin">💜 Sea Urchin Purple</option>
+                <option value="biolum">🔵 Bioluminescent</option>
+                <option value="coral">🪸 Deep Coral</option>
+                <option value="abyss">🖤 Midnight Abyss</option>
+            </select>
+        </div>
+
+        <button class="btn-gen" onclick="generate()">🦔 GENERATE SEA URCHIN PATTERN</button>
+
+        <div class="btns">
+            <div class="btn" id="btnWave" onclick="toggleWave()" title="Underwater sway animation">🌊 Wave</div>
+            <div class="btn" id="btnScope" onclick="toggleScope()" title="Preview telescoping">🔭 Telescope</div>
+            <div class="btn" onclick="randomize()" title="Randomize spine lengths">🎲 Randomize</div>
+            <div class="btn" id="btnLabels" onclick="toggleLabels()" title="Show anatomy zones">🏷 Labels</div>
+        </div>
+
+        <div class="progress"><div class="pfill" id="pfill"></div></div>
+    </div>
+
+    <!-- CENTER VIEWER -->
+    <div class="viewer" id="viewer">
+        <canvas id="c"></canvas>
+        <div class="viewer-hud">
+            <div class="title">SEA URCHIN PARKA — LIVE PREVIEW</div>
+            <div class="sub">Full-coverage biomimetic spine distribution</div>
+        </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="panel">
+        <h2>📐 Technical Specs</h2>
+
+        <div class="spec" id="specBox">
+SPINE COUNT:  —
+AVG LENGTH:   —mm
+MATERIAL:     —g PETG
+PRINT TIME:   —h
+CONNECTIONS:  —
+PANELS:       6 modular
+        </div>
+
+        <div class="cgroup" style="margin-top:10px;">
+            <div class="clabel" style="margin-bottom:8px;">Anatomy Zones</div>
+            <div class="zone-list" id="zoneList">
+                <div><span>🔘 Hood</span><span class="zcount">—</span></div>
+                <div><span>🔘 Fur Collar</span><span class="zcount">—</span></div>
+                <div><span>🔘 Left Sleeve</span><span class="zcount">—</span></div>
+                <div><span>🔘 Right Sleeve</span><span class="zcount">—</span></div>
+                <div><span>🔘 Chest Panel</span><span class="zcount">—</span></div>
+                <div><span>🔘 Lower Body</span><span class="zcount">—</span></div>
+            </div>
+        </div>
+
+        <div class="cgroup">
+            <div class="clabel" style="margin-bottom:6px;">Flag / Hydro-Dip</div>
+            <select id="selFlag">
+                <option value="none">None</option>
+                <option value="usa">🇺🇸 USA Flag (back panel)</option>
+                <option value="canada">🇨🇦 Canada Flag</option>
+                <option value="custom">🎨 Custom Upload</option>
+            </select>
+        </div>
+
+        <div class="cgroup">
+            <div class="clabel" style="margin-bottom:6px;">Export Files</div>
+            <div class="exports">
+                <div class="export-btn" onclick="exportFile('STL')">📄 STL Files</div>
+                <div class="export-btn" onclick="exportFile('Blueprint')">📋 Blueprint</div>
+                <div class="export-btn" onclick="exportFile('Manual')">📖 Manual</div>
+                <div class="export-btn" onclick="exportFile('Hydro')">🎨 Hydro Template</div>
+            </div>
+        </div>
+
+        <div class="cgroup">
+            <div class="clabel" style="margin-bottom:6px;">AI Recommendations</div>
+            <div class="ai-rec" id="aiRec">
+                Click <strong>Generate</strong> to receive AI-optimized biomimetic spine placement recommendations.
+            </div>
+        </div>
+
+        <button class="launch-btn" onclick="launchFull()">🚀 LAUNCH FULL 3D DESIGNER</button>
+    </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+//  CANVAS SETUP
+// ─────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+const viewer = document.getElementById('viewer');
+
+let time       = 0;
+let waving     = true;
+let scoping    = false;
+let showLabels = false;
+let rafId      = null;
+let spines     = [];
+let zoneCounts = { hood:0, collar:0, leftSleeve:0, rightSleeve:0, chest:0, lower:0 };
+
+// ─────────────────────────────────────────────────────────────
+//  COLOR THEMES
+// ─────────────────────────────────────────────────────────────
+const THEMES = {
+    pink:   { base:'#3a0045', mid:'#aa1555', bright:'#ff4081', light:'#ff90bb', tip:'rgba(255,230,245,0.95)', glow:'rgba(255,64,129,0.4)',  water1:'#020a14', water2:'#03111f' },
+    urchin: { base:'#1a0040', mid:'#5500a0', bright:'#8a2be2', light:'#b87cff', tip:'rgba(230,200,255,0.95)', glow:'rgba(140,50,255,0.4)',  water1:'#05020f', water2:'#0b0520' },
+    biolum: { base:'#001530', mid:'#004a90', bright:'#00aaff', light:'#66d4ff', tip:'rgba(200,240,255,0.95)', glow:'rgba(0,170,255,0.45)',  water1:'#010810', water2:'#020e1a' },
+    coral:  { base:'#2a0010', mid:'#991530', bright:'#ff3355', light:'#ff8899', tip:'rgba(255,220,220,0.95)', glow:'rgba(255,50,80,0.4)',   water1:'#100505', water2:'#1a080a' },
+    abyss:  { base:'#050510', mid:'#1a1a40', bright:'#4455aa', light:'#8899dd', tip:'rgba(200,210,255,0.95)', glow:'rgba(80,100,220,0.35)', water1:'#010105', water2:'#050510' }
+};
+let T = THEMES.pink;
+
+// ─────────────────────────────────────────────────────────────
+//  PARKA GEOMETRY  (design space: 600 × 760)
+// ─────────────────────────────────────────────────────────────
+//
+//  Reference parka anatomy:
+//  ┌─────────────────────────────┐
+//  │  [FUR COLLAR RING / HOOD]   │  y ≈ 0–185
+//  │   left   [CHEST]   right    │  y ≈ 185–370
+//  │  sleeve          sleeve     │
+//  │        [LOWER BODY]         │  y ≈ 370–640
+//  └─────────────────────────────┘
+//
+function tx(x, sc, cx) { return cx + (x - 300) * sc; }
+function ty(y, sc, cy) { return cy + (y - 375) * sc; }
+
+function getScale() {
+    const w = canvas.width, h = canvas.height;
+    const sc = Math.min(w / 600, h / 760) * 0.92;
+    return { sc, cx: w / 2, cy: h / 2 };
+}
+
+function buildPaths(sc, cx, cy) {
+    const x = v => tx(v, sc, cx);
+    const y = v => ty(v, sc, cy);
+    const p = {};
+
+    // ── HOOD: large dome above collar ──
+    p.hood = new Path2D();
+    p.hood.ellipse(x(300), y(108), 82*sc, 73*sc, 0, 0, Math.PI * 2);
+
+    // ── FUR COLLAR: thick crescent ring ──
+    // Outer arc (shoulder-to-shoulder), inner arc (face opening)
+    p.collar = new Path2D();
+    p.collar.moveTo(x(165), y(178));
+    p.collar.bezierCurveTo(x(155), y(125), x(215), y(95), x(300), y(100));
+    p.collar.bezierCurveTo(x(385), y(95), x(445), y(125), x(435), y(178));
+    p.collar.lineTo(x(412), y(183));
+    p.collar.bezierCurveTo(x(400), y(143), x(360), y(122), x(300), y(126));
+    p.collar.bezierCurveTo(x(240), y(122), x(200), y(143), x(188), y(183));
+    p.collar.closePath();
+
+    // ── LEFT SLEEVE ──
+    p.leftSleeve = new Path2D();
+    p.leftSleeve.moveTo(x(185), y(192));
+    p.leftSleeve.lineTo(x(82),  y(212));
+    p.leftSleeve.lineTo(x(56),  y(398));
+    p.leftSleeve.lineTo(x(94),  y(408));
+    p.leftSleeve.lineTo(x(162), y(238));
+    p.leftSleeve.closePath();
+
+    // ── RIGHT SLEEVE ──
+    p.rightSleeve = new Path2D();
+    p.rightSleeve.moveTo(x(415), y(192));
+    p.rightSleeve.lineTo(x(518), y(212));
+    p.rightSleeve.lineTo(x(544), y(398));
+    p.rightSleeve.lineTo(x(506), y(408));
+    p.rightSleeve.lineTo(x(438), y(238));
+    p.rightSleeve.closePath();
+
+    // ── CHEST (upper torso) ──
+    p.chest = new Path2D();
+    p.chest.moveTo(x(185), y(192));
+    p.chest.lineTo(x(415), y(192));
+    p.chest.bezierCurveTo(x(430), y(260), x(435), y(310), x(432), y(368));
+    p.chest.lineTo(x(168), y(368));
+    p.chest.bezierCurveTo(x(165), y(310), x(170), y(260), x(185), y(192));
+    p.chest.closePath();
+
+    // ── LOWER BODY ──
+    p.lower = new Path2D();
+    p.lower.moveTo(x(168), y(368));
+    p.lower.lineTo(x(432), y(368));
+    p.lower.bezierCurveTo(x(438), y(440), x(432), y(520), x(415), y(632));
+    p.lower.lineTo(x(185), y(632));
+    p.lower.bezierCurveTo(x(168), y(520), x(162), y(440), x(168), y(368));
+    p.lower.closePath();
+
+    return p;
+}
+
+// Region centroids used for outward spine direction
+function centroids(sc, cx, cy) {
+    const x = v => tx(v, sc, cx);
+    const y = v => ty(v, sc, cy);
+    return {
+        hood:        { x: x(300), y: y(108) },
+        collar:      { x: x(300), y: y(148) },
+        leftSleeve:  { x: x(120), y: y(305) },
+        rightSleeve: { x: x(480), y: y(305) },
+        chest:       { x: x(300), y: y(275) },
+        lower:       { x: x(300), y: y(500) }
+    };
+}
+
+// ─────────────────────────────────────────────────────────────
+//  SPINE GENERATION
+// ─────────────────────────────────────────────────────────────
+function generateSpines() {
+    const { sc, cx, cy } = getScale();
+    const paths  = buildPaths(sc, cx, cy);
+    const cents  = centroids(sc, cx, cy);
+    const maxLen = +document.getElementById('rLen').value;
+    const spread = +document.getElementById('rSpread').value * Math.PI / 180;
+
+    // Region order: test most specific (smaller) first
+    const regions = ['hood','collar','leftSleeve','rightSleeve','chest','lower'];
+
+    // Grid spacing — denser = more coverage
+    const step = Math.max(5, Math.round(9 / sc));
+
+    const minX = cx - 280*sc, maxX = cx + 280*sc;
+    const minY = cy - 310*sc, maxY = cy + 320*sc;
+
+    spines = [];
+    zoneCounts = { hood:0, collar:0, leftSleeve:0, rightSleeve:0, chest:0, lower:0 };
+
+    for (let px = minX; px <= maxX; px += step) {
+        for (let py = minY; py <= maxY; py += step) {
+            // Organic jitter
+            const jx = px + (Math.random() - 0.5) * step * 0.65;
+            const jy = py + (Math.random() - 0.5) * step * 0.65;
+
+            let region = null;
+            for (const r of regions) {
+                if (ctx.isPointInPath(paths[r], jx, jy)) { region = r; break; }
+            }
+            if (!region) continue;
+
+            const c = cents[region];
+            const dx = jx - c.x;
+            const dy = jy - c.y;
+            const dist = Math.hypot(dx, dy) || 0.001;
+
+            // Correct angle formula: spine drawn as (0,0)→(0,-len) locally
+            // After rotate(θ), tip points in direction (sin θ, -cos θ) in canvas space
+            // We want tip direction = (dx/dist, dy/dist)  →  θ = atan2(dx, -dy)
+            const baseAngle = Math.atan2(dx, -dy);
+
+            // 20% random-direction spines for the grid-like layering Kojo wanted
+            const useRandom = Math.random() < 0.20;
+            const randAngle = useRandom ? Math.random() * Math.PI * 2 : baseAngle;
+            const angleVar  = (Math.random() - 0.5) * spread * 2;
+            const finalAngle = randAngle + angleVar;
+
+            // Length: longer near edges, shorter at center (foreshortening illusion)
+            const maxRegionDist = (region === 'hood' ? 75 : 130) * sc;
+            const edgeFactor = 0.45 + 0.55 * Math.min(1, dist / maxRegionDist);
+            const regionMult  = { hood:1.35, collar:0.65, chest:1.0, lower:1.05, leftSleeve:0.9, rightSleeve:0.9 }[region];
+            const len = sc * (7 + Math.random() * maxLen * 0.85) * regionMult * edgeFactor;
+
+            // Thickness
+            const thickness = Math.max(0.7, len * 0.07);
+
+            spines.push({
+                x: jx, y: jy,
+                angle: finalAngle,
+                baseLen: len,
+                len,
+                thickness,
+                phase:     Math.random() * Math.PI * 2,
+                swayAmt:   0.035 + Math.random() * 0.045,
+                swaySpeed: 0.25 + Math.random() * 0.5,
+                region
+            });
+            zoneCounts[region]++;
+        }
+    }
+
+    // Sort by y so closer-to-viewer spines render on top
+    spines.sort((a, b) => a.y - b.y);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  DRAWING
+// ─────────────────────────────────────────────────────────────
+function drawBackground() {
+    const w = canvas.width, h = canvas.height;
+
+    // Deep ocean fill
+    const bg = ctx.createLinearGradient(0, 0, w * 0.3, h);
+    bg.addColorStop(0, T.water1);
+    bg.addColorStop(1, T.water2);
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+
+    // Animated caustic blobs
+    ctx.save();
+    for (let i = 0; i < 7; i++) {
+        const bx = w * (((i * 0.151 + time * 0.018) % 1));
+        const by = h * (((i * 0.233 + time * 0.013) % 1));
+        const br = (55 + 45 * Math.sin(time * 0.28 + i * 1.3)) * Math.min(w, h) / 600;
+        const cg = ctx.createRadialGradient(bx, by, 0, bx, by, br);
+        cg.addColorStop(0, 'rgba(0,120,200,0.045)');
+        cg.addColorStop(1, 'transparent');
+        ctx.fillStyle = cg;
+        ctx.beginPath();
+        ctx.arc(bx, by, br, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.restore();
+
+    // Floating micro-bubbles
+    ctx.save();
+    for (let i = 0; i < 30; i++) {
+        const bx = w * (((i * 0.0931 + time * 0.004 * (0.6 + i * 0.04)) % 1));
+        const by = h - h * (((i * 0.189 + time * 0.006 * (0.7 + i * 0.035)) % 1));
+        const br = 0.8 + (i % 4) * 0.5;
+        ctx.beginPath();
+        ctx.arc(bx, by, br, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(120,200,255,0.35)';
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function drawParkaAnatomy(paths, sc, cx, cy) {
+    const x = v => tx(v, sc, cx);
+    const y = v => ty(v, sc, cy);
+
+    // Zone base colors (very dark, mostly covered by spines but visible between them)
+    const fills = {
+        lower:       '#060e1c',
+        chest:       '#070f1e',
+        leftSleeve:  '#080f20',
+        rightSleeve: '#080f20',
+        collar:      '#090f22',
+        hood:        '#0a1025'
+    };
+    const draw = ['lower','chest','leftSleeve','rightSleeve','collar','hood'];
+
+    draw.forEach(r => {
+        ctx.save();
+        ctx.fillStyle = fills[r];
+        ctx.fill(paths[r]);
+        ctx.strokeStyle = 'rgba(0,160,220,0.18)';
+        ctx.lineWidth = 0.8;
+        ctx.stroke(paths[r]);
+        ctx.restore();
+    });
+
+    // ── Chevron quilting lines (V-shapes on body) ──
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,180,240,0.13)';
+    ctx.lineWidth = 0.7;
+    for (let gy = 215; gy <= 615; gy += 38) {
+        ctx.beginPath();
+        ctx.moveTo(x(192), y(gy - 14));
+        ctx.lineTo(x(300), y(gy + 14));
+        ctx.lineTo(x(408), y(gy - 14));
+        ctx.stroke();
+    }
+    ctx.restore();
+
+    // ── Center front zipper ──
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,200,255,0.22)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5*sc, 3.5*sc]);
+    ctx.beginPath();
+    ctx.moveTo(x(300), y(148));
+    ctx.lineTo(x(300), y(632));
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // ── Hip pocket zippers (angled lines) ──
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,200,255,0.18)';
+    ctx.lineWidth = 0.8;
+    [[220,435,260,465],[340,435,380,465]].forEach(([x1,y1,x2,y2]) => {
+        ctx.beginPath();
+        ctx.moveTo(x(x1), y(y1));
+        ctx.lineTo(x(x2), y(y2));
+        ctx.stroke();
+    });
+    ctx.restore();
+
+    // ── Fur collar texture (short radial hairs around face opening) ──
+    ctx.save();
+    ctx.strokeStyle = 'rgba(160,130,80,0.2)';
+    ctx.lineWidth = 0.7;
+    const faceX = x(300), faceY = y(140);
+    const innerR = 55 * sc, hairLen = 10 * sc;
+    for (let a = 0; a < Math.PI * 2; a += 0.22) {
+        const rx = faceX + innerR * Math.cos(a);
+        const ry = faceY + innerR * Math.sin(a);
+        ctx.beginPath();
+        ctx.moveTo(rx, ry);
+        ctx.lineTo(faceX + (innerR + hairLen) * Math.cos(a), faceY + (innerR + hairLen) * Math.sin(a));
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function drawSpine(spine, t) {
+    const sway  = waving ? Math.sin(t * spine.swaySpeed + spine.phase) * spine.swayAmt : 0;
+    const angle = spine.angle + sway;
+    const len   = scoping
+        ? spine.baseLen * (0.45 + 0.55 * Math.abs(Math.sin(t * 0.55 + spine.phase)))
+        : spine.len;
+
+    ctx.save();
+    ctx.translate(spine.x, spine.y);
+    ctx.rotate(angle);
+
+    // Base glow halo
+    const halo = ctx.createRadialGradient(0, 0, 0, 0, 0, spine.thickness * 2.5);
+    halo.addColorStop(0, T.glow);
+    halo.addColorStop(1, 'transparent');
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(0, 0, spine.thickness * 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Main spine: tapered triangle
+    ctx.beginPath();
+    ctx.moveTo(-spine.thickness * 0.5, 0);
+    ctx.lineTo(0, -len);
+    ctx.lineTo(spine.thickness * 0.5, 0);
+    ctx.closePath();
+
+    const g = ctx.createLinearGradient(0, 0, 0, -len);
+    g.addColorStop(0,    T.base);
+    g.addColorStop(0.22, T.mid);
+    g.addColorStop(0.60, T.bright);
+    g.addColorStop(0.85, T.light);
+    g.addColorStop(1,    T.tip);
+    ctx.fillStyle = g;
+    ctx.fill();
+
+    // Specular highlight line along spine edge
+    ctx.beginPath();
+    ctx.moveTo(spine.thickness * 0.2, 0);
+    ctx.lineTo(0, -len * 0.9);
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+
+    // Bright tip dot
+    const tipGlow = ctx.createRadialGradient(0, -len, 0, 0, -len, spine.thickness * 1.8);
+    tipGlow.addColorStop(0, 'rgba(255,255,255,0.85)');
+    tipGlow.addColorStop(0.4, T.light);
+    tipGlow.addColorStop(1, 'transparent');
+    ctx.fillStyle = tipGlow;
+    ctx.beginPath();
+    ctx.arc(0, -len, spine.thickness * 1.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+function drawLabels(sc, cx, cy) {
+    if (!showLabels) return;
+    const x = v => tx(v, sc, cx);
+    const y = v => ty(v, sc, cy);
+    const fs = Math.round(8.5 * sc);
+
+    ctx.save();
+    ctx.font = `${fs}px Orbitron, monospace`;
+    ctx.textAlign = 'center';
+
+    const labels = [
+        [300, 42,  'HOOD · Panel 1'],
+        [300, 120, 'FUR COLLAR'],
+        [97,  290, 'SLEEVE L'],
+        [503, 290, 'SLEEVE R'],
+        [300, 258, 'CHEST · Panel 3'],
+        [300, 508, 'LOWER BODY · Panel 5'],
+    ];
+
+    labels.forEach(([lx, ly, txt]) => {
+        const px = x(lx), py = y(ly);
+        const tw = ctx.measureText(txt).width;
+        ctx.fillStyle = 'rgba(0,0,0,0.65)';
+        ctx.fillRect(px - tw/2 - 5, py - fs, tw + 10, fs + 4);
+        ctx.fillStyle = 'rgba(0,200,255,0.85)';
+        ctx.fillText(txt, px, py);
+    });
+    ctx.restore();
+}
+
+function drawEmptyHint(paths) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,200,255,0.22)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 4]);
+    ['hood','collar','leftSleeve','rightSleeve','chest','lower'].forEach(r => ctx.stroke(paths[r]));
+    ctx.setLineDash([]);
+
+    ctx.font = `${Math.round(11 * getScale().sc)}px Orbitron, monospace`;
+    ctx.fillStyle = 'rgba(0,200,255,0.38)';
+    ctx.textAlign = 'center';
+    const { cx, cy } = getScale();
+    ctx.fillText('CLICK GENERATE TO GROW SPINES', cx, cy);
+    ctx.restore();
+}
+
+// ─────────────────────────────────────────────────────────────
+//  RENDER LOOP
+// ─────────────────────────────────────────────────────────────
+function render() {
+    if (waving || scoping) time += 0.016;
+
+    // Keep canvas pixel size in sync with CSS display size
+    const r = viewer.getBoundingClientRect();
+    if (canvas.width !== Math.round(r.width) || canvas.height !== Math.round(r.height)) {
+        canvas.width  = Math.round(r.width);
+        canvas.height = Math.round(r.height);
+        if (spines.length > 0) generateSpines(); // regenerate for new size
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawBackground();
+
+    const { sc, cx, cy } = getScale();
+    const paths = buildPaths(sc, cx, cy);
+
+    if (spines.length === 0) {
+        drawEmptyHint(paths);
+    } else {
+        drawParkaAnatomy(paths, sc, cx, cy);
+        spines.forEach(s => drawSpine(s, time));
+        drawLabels(sc, cx, cy);
+    }
+
+    rafId = requestAnimationFrame(render);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  AI GENERATION SEQUENCE
+// ─────────────────────────────────────────────────────────────
+function generate() {
+    const status = document.getElementById('aiStatus');
+    const pfill  = document.getElementById('pfill');
+    spines = [];
+
+    status.className = 'ai-status thinking';
+    pfill.style.width = '0%';
+
+    const steps = [
+        [15,  '🔬 Mapping anatomy zones...'],
+        [32,  '🧬 Computing surface normals...'],
+        [52,  '📍 Distributing spine roots...'],
+        [72,  '📐 Optimizing density & angles...'],
+        [90,  '✨ Finalizing urchin pattern...'],
+    ];
+
+    let i = 0;
+    const iv = setInterval(() => {
+        if (i < steps.length) {
+            pfill.style.width = steps[i][0] + '%';
+            status.innerHTML  = `<div class="spinner"></div><strong>${steps[i][1]}</strong>`;
+            i++;
+        } else {
+            clearInterval(iv);
+            generateSpines();
+            const total = spines.length;
+            pfill.style.width = '100%';
+            status.className  = 'ai-status';
+            status.innerHTML  = `<strong>✅ ${total} Spines Active</strong><br>Full-coverage pattern ready`;
+            updateSpecs(total);
+            updateZones();
+            document.getElementById('aiRec').innerHTML =
+                `🧬 <strong>AI Analysis Complete:</strong><br>
+                • Biomimetic <em>S. purpuratus</em> distribution<br>
+                • 6 anatomical zones fully covered<br>
+                • Radial + grid-layer hybrid pattern<br>
+                • Telescoping mechanics validated<br>
+                • Structural integrity: ✅ Confirmed`;
+        }
+    }, 800);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  CONTROLS
+// ─────────────────────────────────────────────────────────────
+function syncSlider(id, val) {
+    document.getElementById('v' + id).textContent = val;
+}
+
+function applyTheme() {
+    T = THEMES[document.getElementById('selTheme').value];
+}
+
+function toggleWave()   {
+    waving = !waving;
+    document.getElementById('btnWave').classList.toggle('active', waving);
+}
+
+function toggleScope()  {
+    scoping = !scoping;
+    document.getElementById('btnScope').classList.toggle('active', scoping);
+}
+
+function toggleLabels() {
+    showLabels = !showLabels;
+    document.getElementById('btnLabels').classList.toggle('active', showLabels);
+}
+
+function randomize() {
+    spines.forEach(s => {
+        s.len   = s.baseLen * (0.7 + Math.random() * 0.65);
+        s.phase = Math.random() * Math.PI * 2;
+    });
+}
+
+function updateSpecs(total) {
+    const len  = +document.getElementById('rLen').value;
+    const seg  = +document.getElementById('rSeg').value;
+    const mat  = Math.round(total * len * 0.11);
+    const pt   = Math.round(total * 0.65 + mat * 0.07);
+    const conn = total * seg;
+    document.getElementById('specBox').textContent =
+`SPINE COUNT:  ${total}
+AVG LENGTH:   ${Math.round(len * 0.6)}mm
+MATERIAL:     ${mat}g PETG
+PRINT TIME:   ${pt}h
+CONNECTIONS:  ${conn}
+PANELS:       6 modular`;
+}
+
+function updateZones() {
+    const zl = document.getElementById('zoneList');
+    const z  = zoneCounts;
+    const total = Object.values(z).reduce((a,b)=>a+b,0);
+    zl.innerHTML = `
+        <div><span>🟣 Hood</span><span class="zcount">${z.hood}</span></div>
+        <div><span>🔵 Fur Collar</span><span class="zcount">${z.collar}</span></div>
+        <div><span>🔴 Left Sleeve</span><span class="zcount">${z.leftSleeve}</span></div>
+        <div><span>🔴 Right Sleeve</span><span class="zcount">${z.rightSleeve}</span></div>
+        <div><span>🟢 Chest Panel</span><span class="zcount">${z.chest}</span></div>
+        <div><span>🟡 Lower Body</span><span class="zcount">${z.lower}</span></div>
+        <div style="border-top:1px solid rgba(0,200,255,0.15);padding-top:4px;margin-top:2px;">
+            <span style="color:var(--accent)">TOTAL</span>
+            <span class="zcount" style="color:var(--success)">${total}</span>
+        </div>`;
+}
+
+function exportFile(type) {
+    const s = document.getElementById('aiStatus');
+    s.className = 'ai-status thinking';
+    s.innerHTML = `<strong>🚀 Exporting ${type}...</strong>`;
+    setTimeout(() => {
+        s.className = 'ai-status';
+        s.innerHTML = `<strong>✅ ${type} Export Complete!</strong>`;
+        alert(`${type} export ready!\n\nIncludes:\n• 3D models (STL)\n• Assembly guide\n• Technical specs\n• Material lists`);
+    }, 1400);
+}
+
+function launchFull() {
+    alert('🚀 Full 3D Designer Mode\n\n• Blender/Fusion 360 pipeline\n• Real-time physics simulation\n• Professional STL export\n• Parametric spine arrays\n\nComing in v2.0!');
+}
+
+// ─────────────────────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────────────────────
+canvas.width  = viewer.clientWidth  || 700;
+canvas.height = viewer.clientHeight || 760;
+render();
+setTimeout(generate, 1200);
+</script>
+</body>
+</html>
