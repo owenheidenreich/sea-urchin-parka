@@ -21,7 +21,7 @@ function Slider({ label, min, max, step, value, display, onChange }) {
 }
 
 export default function GarmentPanel() {
-  const { hoodDepth, set } = useStore();
+  const { hoodDepth, medallionScale, medallionX, medallionY, set } = useStore();
 
   return (
     <div className="flex flex-col h-full overflow-y-auto px-3 py-3"
@@ -36,6 +36,26 @@ export default function GarmentPanel() {
 
       <Slider label="Hood Depth" min={8} max={20} value={hoodDepth}
               display={`${hoodDepth}`} onChange={(v) => set({ hoodDepth: v })} />
+
+      {/* ── Medallion ── */}
+      <h2 style={{
+        fontFamily: 'Orbitron,monospace', color: '#00c8ff', fontSize: '.78rem',
+        letterSpacing: '.1em', margin: '14px 0 10px', textTransform: 'uppercase',
+      }}>
+        Medallion
+      </h2>
+
+      <Slider label="Size" min={0.3} max={3.0} step={0.1} value={medallionScale}
+              display={`${medallionScale.toFixed(1)}x`}
+              onChange={(v) => set({ medallionScale: v })} />
+
+      <Slider label="Y Position" min={-10} max={20} step={0.5} value={medallionY}
+              display={medallionY.toFixed(1)}
+              onChange={(v) => set({ medallionY: v })} />
+
+      <Slider label="X Position" min={-10} max={10} step={0.5} value={medallionX}
+              display={medallionX.toFixed(1)}
+              onChange={(v) => set({ medallionX: v })} />
 
       <div className="mt-4 p-3 rounded-lg"
            style={{ background: 'rgba(0,0,0,.2)', border: '1px solid rgba(0,180,255,.07)' }}>

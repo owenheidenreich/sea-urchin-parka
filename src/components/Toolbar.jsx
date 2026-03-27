@@ -5,6 +5,15 @@ import { useStore } from '../store/store.js';
 
 const VIEWS = ['FRONT', 'BACK', 'LEFT', 'RIGHT', 'TOP', '3/4'];
 
+export const BG_SHADES = [
+  '#0a0e1a', // darkest (default)
+  '#1a1f2e',
+  '#2e3444',
+  '#4a505e',
+  '#787e8a',
+  '#c8ccd4', // lightest
+];
+
 function Btn({ label, active, onClick }) {
   return (
     <button onClick={onClick} style={{
@@ -25,6 +34,9 @@ export default function Toolbar() {
     cameraPreset, setCameraPreset,
     showMannequin, toggleMannequin,
     showWireframe, toggleWireframe,
+    showMedallion, toggleMedallion,
+    showAxes, toggleAxes,
+    bgShade, setBgShade,
   } = useStore();
 
   return (
@@ -58,6 +70,20 @@ export default function Toolbar() {
       {/* Toggles */}
       <Btn label="MANNEQUIN" active={showMannequin} onClick={toggleMannequin} />
       <Btn label="WIREFRAME" active={showWireframe} onClick={toggleWireframe} />
+      <Btn label="MEDALLION" active={showMedallion} onClick={toggleMedallion} />
+      <Btn label="AXES" active={showAxes} onClick={toggleAxes} />
+
+      <div style={{ width: 1, height: 20, background: 'rgba(0,180,255,.15)', margin: '0 8px' }} />
+
+      {/* Background shades */}
+      <div className="flex gap-1 items-center">
+        {BG_SHADES.map((color, i) => (
+          <button key={i} onClick={() => setBgShade(i)} style={{
+            width: 16, height: 16, borderRadius: 3, background: color, cursor: 'pointer',
+            border: bgShade === i ? '2px solid #00c8ff' : '1px solid rgba(255,255,255,.15)',
+          }} />
+        ))}
+      </div>
 
       {/* Spacer */}
       <div className="flex-1" />
