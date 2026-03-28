@@ -1,18 +1,21 @@
 /**
  * DecorationPanel.jsx — Right panel: ammunition + theme controls + presets.
  */
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useStore } from '../store/store.js';
 
-const STORAGE_KEY = 'sup-bullet-presets';
 const PRESET_FIELDS = ['ammoCount','ammoSizeMin','ammoSizeMax','ammoSpread','flatRatio','layerCount','themeKey'];
 
-function loadPresets() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+function storageKey(garment) {
+  return `sup-${garment}-presets`;
+}
+
+function loadPresets(garment) {
+  try { return JSON.parse(localStorage.getItem(storageKey(garment))) || []; }
   catch { return []; }
 }
-function savePresets(list) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+function savePresets(garment, list) {
+  localStorage.setItem(storageKey(garment), JSON.stringify(list));
 }
 
 function Slider({ label, min, max, step, value, display, onChange }) {
@@ -34,15 +37,23 @@ function Slider({ label, min, max, step, value, display, onChange }) {
 
 export default function DecorationPanel() {
   const { ammoCount, ammoSizeMin, ammoSizeMax, ammoSpread, flatRatio, layerCount, themeKey, set } = useStore();
-  const [presets, setPresets] = useState(loadPresets);
+  const activeGarment = useStore((s) => s.activeGarment);
+  const [presets, setPresets] = useState(() => loadPresets(activeGarment));
   const [presetName, setPresetName] = useState('');
+
+  // Reload presets when garment changes
+  const [lastGarment, setLastGarment] = useState(activeGarment);
+  if (activeGarment !== lastGarment) {
+    setPresets(loadPresets(activeGarment));
+    setLastGarment(activeGarment);
+  }
 
   function handleSave() {
     const name = presetName.trim() || `Preset ${presets.length + 1}`;
     const values = {};
     PRESET_FIELDS.forEach(k => values[k] = useStore.getState()[k]);
     const updated = [...presets.filter(p => p.name !== name), { name, values }];
-    savePresets(updated);
+    savePresets(activeGarment, updated);
     setPresets(updated);
     setPresetName('');
   }
@@ -53,7 +64,7 @@ export default function DecorationPanel() {
 
   function handleDelete(name) {
     const updated = presets.filter(p => p.name !== name);
-    savePresets(updated);
+    savePresets(activeGarment, updated);
     setPresets(updated);
   }
 

@@ -1,7 +1,65 @@
 /**
- * GarmentPanel.jsx — Left panel: gown shape + wheel + medallion controls.
+ * GarmentPanel.jsx — Left panel: data-driven sliders for active garment.
  */
 import { useStore } from '../store/store.js';
+
+const GOWN_SECTIONS = [
+  {
+    title: 'Gown Shape',
+    sliders: [
+      { label: 'Bodice Height', key: 'bodiceHeight', min: 12, max: 22, step: 1 },
+      { label: 'Waist Width',   key: 'waistWidth',   min: 7,  max: 14, step: 0.2, decimals: 1 },
+      { label: 'Bust Width',    key: 'bustWidth',    min: 8,  max: 16, step: 0.2, decimals: 1 },
+      { label: 'Hip Width',     key: 'hipWidth',     min: 8,  max: 16, step: 0.2, decimals: 1 },
+      { label: 'Hem Height',    key: 'hemHeight',    min: -38, max: -24, step: 1 },
+      { label: 'Skirt Flare',   key: 'skirtFlare',   min: 0.5, max: 2.0, step: 0.1, decimals: 1, suffix: 'x' },
+      { label: 'Slit Height',   key: 'slitHeight',   min: -28, max: 5, step: 1 },
+      { label: 'Slit Width',    key: 'slitWidth',    min: 2,  max: 10, step: 1 },
+    ],
+  },
+  {
+    title: 'Train',
+    sliders: [
+      { label: 'Train Length', key: 'trainLength', min: 10, max: 50, step: 1 },
+      { label: 'Train Width',  key: 'trainWidth',  min: 0.5, max: 2.0, step: 0.1, decimals: 1, suffix: 'x' },
+    ],
+  },
+  {
+    title: 'Wheels',
+    sliders: [
+      { label: 'Wheel Count', key: 'wheelCount', min: 20, max: 200, step: 5 },
+      { label: 'Wheel Size',  key: 'wheelSize',  min: 0.3, max: 1.2, step: 0.05, decimals: 2 },
+    ],
+  },
+  {
+    title: 'Medallion',
+    sliders: [
+      { label: 'Size',       key: 'medallionScale', min: 0.3, max: 3.0, step: 0.1, decimals: 1, suffix: 'x' },
+      { label: 'Y Position', key: 'medallionY',     min: -10, max: 20, step: 0.5, decimals: 1 },
+      { label: 'X Position', key: 'medallionX',     min: -10, max: 10, step: 0.5, decimals: 1 },
+    ],
+  },
+];
+
+const PARKA_SECTIONS = [
+  {
+    title: 'Parka Shape',
+    sliders: [
+      { label: 'Hood Depth',     key: 'hoodDepth',    min: 8,  max: 20, step: 1 },
+      { label: 'Body Length',    key: 'bodyLength',   min: 40, max: 70, step: 1 },
+      { label: 'Waist Taper',   key: 'waistTaper',   min: 0.7, max: 1.0, step: 0.02, decimals: 2 },
+      { label: 'Sleeve Length',  key: 'sleeveLength', min: 20, max: 45, step: 1 },
+      { label: 'Collar Height', key: 'collarHeight', min: 2,  max: 8,  step: 1 },
+    ],
+  },
+];
+
+const GARMENT_DESCRIPTIONS = {
+  gown: 'Strapless gown with dramatic floor-length skirt and trailing train. Embedded wheels allow the dress to glide as the wearer walks. Front slit reveals the legs. Covered in ammunition.',
+  parka: 'Biomimetic parka with hood, sleeves, and collar. Surface covered in ammunition arranged in sea urchin distribution. Telescoping spines collapse for storage.',
+};
+
+const SECTIONS = { gown: GOWN_SECTIONS, parka: PARKA_SECTIONS };
 
 function Slider({ label, min, max, step, value, display, onChange }) {
   return (
@@ -32,85 +90,46 @@ function SectionTitle({ children }) {
 }
 
 export default function GarmentPanel() {
-  const {
-    bodiceHeight, skirtFlare, slitHeight, slitWidth,
-    waistWidth, bustWidth, hipWidth, hemHeight,
-    trainLength, trainWidth, wheelCount, wheelSize,
-    medallionScale, medallionX, medallionY, set,
-  } = useStore();
+  const activeGarment = useStore((s) => s.activeGarment);
+  const garmentParams = useStore((s) => s[activeGarment]);
+  const setParam = useStore((s) =>
+    activeGarment === 'gown' ? s.setGownParam : s.setParkaParam
+  );
+
+  const sections = SECTIONS[activeGarment] || [];
+
+  function formatValue(slider, val) {
+    if (slider.decimals != null) {
+      const formatted = val.toFixed(slider.decimals);
+      return slider.suffix ? `${formatted}${slider.suffix}` : formatted;
+    }
+    return slider.suffix ? `${val}${slider.suffix}` : val;
+  }
 
   return (
     <div className="flex flex-col h-full overflow-y-auto px-3 py-3"
          style={{ fontFamily: "'Rajdhani',sans-serif" }}>
 
-      <SectionTitle>Gown Shape</SectionTitle>
-
-      <Slider label="Bodice Height" min={12} max={22} value={bodiceHeight}
-              display={bodiceHeight} onChange={(v) => set({ bodiceHeight: v })} />
-
-      <Slider label="Waist Width" min={7} max={14} step={0.2} value={waistWidth}
-              display={waistWidth.toFixed(1)}
-              onChange={(v) => set({ waistWidth: v })} />
-
-      <Slider label="Bust Width" min={8} max={16} step={0.2} value={bustWidth}
-              display={bustWidth.toFixed(1)}
-              onChange={(v) => set({ bustWidth: v })} />
-
-      <Slider label="Hip Width" min={8} max={16} step={0.2} value={hipWidth}
-              display={hipWidth.toFixed(1)}
-              onChange={(v) => set({ hipWidth: v })} />
-
-      <Slider label="Hem Height" min={-38} max={-24} step={1} value={hemHeight}
-              display={hemHeight} onChange={(v) => set({ hemHeight: v })} />
-
-      <Slider label="Skirt Flare" min={0.5} max={2.0} step={0.1} value={skirtFlare}
-              display={`${skirtFlare.toFixed(1)}x`}
-              onChange={(v) => set({ skirtFlare: v })} />
-
-      <Slider label="Slit Height" min={-28} max={5} value={slitHeight}
-              display={slitHeight} onChange={(v) => set({ slitHeight: v })} />
-
-      <Slider label="Slit Width" min={2} max={10} value={slitWidth}
-              display={slitWidth} onChange={(v) => set({ slitWidth: v })} />
-
-      <SectionTitle>Train</SectionTitle>
-
-      <Slider label="Train Length" min={10} max={50} value={trainLength}
-              display={trainLength} onChange={(v) => set({ trainLength: v })} />
-
-      <Slider label="Train Width" min={0.5} max={2.0} step={0.1} value={trainWidth}
-              display={`${trainWidth.toFixed(1)}x`}
-              onChange={(v) => set({ trainWidth: v })} />
-
-      <SectionTitle>Wheels</SectionTitle>
-
-      <Slider label="Wheel Count" min={20} max={200} step={5} value={wheelCount}
-              display={wheelCount} onChange={(v) => set({ wheelCount: v })} />
-
-      <Slider label="Wheel Size" min={0.3} max={1.2} step={0.05} value={wheelSize}
-              display={wheelSize.toFixed(2)}
-              onChange={(v) => set({ wheelSize: v })} />
-
-      <SectionTitle>Medallion</SectionTitle>
-
-      <Slider label="Size" min={0.3} max={3.0} step={0.1} value={medallionScale}
-              display={`${medallionScale.toFixed(1)}x`}
-              onChange={(v) => set({ medallionScale: v })} />
-
-      <Slider label="Y Position" min={-10} max={20} step={0.5} value={medallionY}
-              display={medallionY.toFixed(1)}
-              onChange={(v) => set({ medallionY: v })} />
-
-      <Slider label="X Position" min={-10} max={10} step={0.5} value={medallionX}
-              display={medallionX.toFixed(1)}
-              onChange={(v) => set({ medallionX: v })} />
+      {sections.map((section) => (
+        <div key={section.title}>
+          <SectionTitle>{section.title}</SectionTitle>
+          {section.sliders.map((sl) => (
+            <Slider key={sl.key}
+                    label={sl.label}
+                    min={sl.min}
+                    max={sl.max}
+                    step={sl.step}
+                    value={garmentParams[sl.key]}
+                    display={formatValue(sl, garmentParams[sl.key])}
+                    onChange={(v) => setParam(sl.key, v)} />
+          ))}
+        </div>
+      ))}
 
       <div className="mt-4 p-3 rounded-lg"
            style={{ background: 'rgba(0,0,0,.2)', border: '1px solid rgba(0,180,255,.07)' }}>
         <div style={{ color: 'rgba(130,190,255,.5)', fontSize: '.7rem', lineHeight: 1.5 }}>
-          Strapless gown with dramatic floor-length skirt and trailing train.
-          Embedded wheels allow the dress to glide as the wearer walks.
-          Front slit reveals the legs. Covered in ammunition.
+          {GARMENT_DESCRIPTIONS[activeGarment]}
         </div>
       </div>
     </div>

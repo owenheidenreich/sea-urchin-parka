@@ -3,6 +3,7 @@ import Viewport        from './components/Viewport.jsx';
 import GarmentPanel    from './components/GarmentPanel.jsx';
 import DecorationPanel from './components/DecorationPanel.jsx';
 import Toolbar         from './components/Toolbar.jsx';
+import { useStore }    from './store/store.js';
 
 const panelStyle = {
   background: 'rgba(3,12,28,.92)',
@@ -12,6 +13,7 @@ const panelStyle = {
 };
 
 export default function App() {
+  const activeGarment = useStore((s) => s.activeGarment);
   // On small screens, panels are toggled via tabs instead of always-visible columns
   const [mobilePanel, setMobilePanel] = useState(null); // null = viewport, 'garment', 'decoration'
 
@@ -54,7 +56,7 @@ export default function App() {
         }}>
           {[
             { key: null, label: '3D VIEW' },
-            { key: 'garment', label: 'GOWN' },
+            { key: 'garment', label: activeGarment === 'gown' ? 'GOWN' : 'PARKA' },
             { key: 'decoration', label: 'BULLETS' },
           ].map(({ key, label }) => (
             <button key={label} onClick={() => setMobilePanel(key)} style={{

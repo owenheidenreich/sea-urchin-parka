@@ -1,29 +1,13 @@
 /**
  * Viewport.jsx — Three.js WebGL scene with OrbitControls.
- * Renders mannequin + gown body + train + details + wheels + ammunition.
+ * Uses garment registry to render either gown or parka.
  */
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { buildGownMannequin } from '../engine/GownMannequin.js';
-import { buildGownBody } from '../engine/GownBody.js';
-import { buildGownTrain } from '../engine/GownTrain.js';
-import { buildGownDetails } from '../engine/GownDetails.js';
-import { buildGownWheels } from '../engine/GownWheels.js';
-import { buildAmmoInstances } from '../engine/AmmoPlacement.js';
-import { buildFlowerMedallion } from '../engine/FlowerMedallion.js';
 import { useStore } from '../store/store.js';
-import { THEMES } from '../utils/themes.js';
+import { GARMENT_BUILDERS, GARMENT_PRESETS } from '../engine/garmentRegistry.js';
 import { BG_SHADES } from './Toolbar.jsx';
-
-const PRESETS = {
-  FRONT: { pos: [0, 5, 80],   tgt: [0, 0, 0] },
-  BACK:  { pos: [0, 5, -80],  tgt: [0, 0, 0] },
-  LEFT:  { pos: [-80, 5, 0],  tgt: [0, 0, 0] },
-  RIGHT: { pos: [80, 5, 0],   tgt: [0, 0, 0] },
-  TOP:   { pos: [0, 90, 1],   tgt: [0, 0, 0] },
-  '3/4': { pos: [55, 25, 55], tgt: [0, 0, 0] },
-};
 
 export default function Viewport() {
   const mountRef     = useRef(null);
@@ -40,15 +24,28 @@ export default function Viewport() {
   const axesRef      = useRef(null);
   const groundRef    = useRef(null);
 
-  const {
-    showMannequin, showWireframe, cameraPreset,
-    ammoCount, ammoSizeMin, ammoSizeMax, ammoSpread, flatRatio, layerCount, themeKey,
-    bodiceHeight, skirtFlare, slitHeight, slitWidth,
-    trainLength, trainWidth, wheelCount, wheelSize,
-    waistWidth, bustWidth, hipWidth, hemHeight,
-    bgShade,
-    medallionScale, medallionX, medallionY,
-  } = useStore();
+  const activeGarment = useStore((s) => s.activeGarment);
+  const showMannequin = useStore((s) => s.showMannequin);
+  const showWireframe = useStore((s) => s.showWireframe);
+  const showMedallion = useStore((s) => s.showMedallion);
+  const showAmmo      = useStore((s) => s.showAmmo);
+  const showWheels    = useStore((s) => s.showWheels);
+  const showAxes      = useStore((s) => s.showAxes);
+  const cameraPreset  = useStore((s) => s.cameraPreset);
+  const bgShade       = useStore((s) => s.bgShade);
+
+  // Shared ammo params
+  const ammoCount   = useStore((s) => s.ammoCount);
+  const ammoSizeMin = useStore((s) => s.ammoSizeMin);
+  const ammoSizeMax = useStore((s) => s.ammoSizeMax);
+  const ammoSpread  = useStore((s) => s.ammoSpread);
+  const flatRatio   = useStore((s) => s.flatRatio);
+  const layerCount  = useStore((s) => s.layerCount);
+  const themeKey    = useStore((s) => s.themeKey);
+
+  // Garment-specific params (subscribe to entire sub-object)
+  const gownParams  = useStore((s) => s.gown);
+  const parkaParams = useStore((s) => s.parka);
 
   // ── Scene init ──
   useEffect(() => {
@@ -75,9 +72,9 @@ export default function Viewport() {
 
     // Camera
     const cam = new THREE.PerspectiveCamera(45, W / H, 0.1, 500);
-    const p = PRESETS['3/4'];
-    cam.position.set(...p.pos);
-    cam.lookAt(...p.tgt);
+    const initPreset = GARMENT_PRESETS[useStore.getState().activeGarment]['3/4'];
+    cam.position.set(...initPreset.pos);
+    cam.lookAt(...initPreset.tgt);
     camRef.current = cam;
 
     // Controls
@@ -86,7 +83,7 @@ export default function Viewport() {
     controls.dampingFactor = 0.08;
     controls.minDistance = 20;
     controls.maxDistance = 200;
-    controls.target.set(0, 0, 0);
+    controls.target.set(...initPreset.tgt);
     controls.enablePan = true;
     controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
     controls.update();
@@ -107,19 +104,17 @@ export default function Viewport() {
     rim.position.set(0, 50, -50);
     scene.add(rim);
 
-    // Under-light for fabric translucency/subsurface glow
     const under = new THREE.DirectionalLight(0x6644aa, 0.3);
     under.position.set(0, -20, 30);
     scene.add(under);
 
     scene.add(new THREE.AmbientLight(0x182030, 0.5));
 
-    // ── Environment for fabric reflections/transmission ──
+    // ── Environment for fabric reflections ──
     const pmremGen = new THREE.PMREMGenerator(renderer);
     pmremGen.compileEquirectangularShader();
     const envScene = new THREE.Scene();
     envScene.background = new THREE.Color(0x182848);
-    // Add colored gradient spheres to give fabric something to reflect
     const envSphereGeo = new THREE.SphereGeometry(100, 16, 16);
     const envTop = new THREE.Mesh(envSphereGeo, new THREE.MeshBasicMaterial({
       color: 0x2244aa, side: THREE.BackSide,
@@ -146,7 +141,7 @@ export default function Viewport() {
     scene.add(axesGroup);
     axesRef.current = axesGroup;
 
-    // ── Build scene objects ──
+    // ── Build initial scene ──
     rebuildScene(scene);
 
     // ── Resize ──
@@ -177,15 +172,24 @@ export default function Viewport() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Rebuild when garment params change ──
+  // ── Rebuild when garment or params change ──
   useEffect(() => {
     if (!sceneRef.current) return;
     rebuildScene(sceneRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ammoCount, ammoSizeMin, ammoSizeMax, ammoSpread, flatRatio, layerCount, themeKey,
-      bodiceHeight, skirtFlare, slitHeight, slitWidth, trainLength, trainWidth,
-      wheelCount, wheelSize, waistWidth, bustWidth, hipWidth, hemHeight,
-      medallionScale, medallionX, medallionY]);
+  }, [activeGarment,
+      ammoCount, ammoSizeMin, ammoSizeMax, ammoSpread, flatRatio, layerCount, themeKey,
+      gownParams, parkaParams]);
+
+  // ── Tween camera when switching garments ──
+  useEffect(() => {
+    if (!camRef.current || !ctrlRef.current) return;
+    const presets = GARMENT_PRESETS[activeGarment];
+    if (!presets) return;
+    const p = presets['3/4'];
+    tweenCamera(camRef.current, ctrlRef.current, p.pos, p.tgt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeGarment]);
 
   // ── Mannequin visibility ──
   useEffect(() => {
@@ -193,25 +197,21 @@ export default function Viewport() {
   }, [showMannequin]);
 
   // ── Medallion visibility ──
-  const showMedallion = useStore((s) => s.showMedallion);
   useEffect(() => {
     if (medallionRef.current) medallionRef.current.visible = showMedallion;
   }, [showMedallion]);
 
   // ── Ammo visibility ──
-  const showAmmo = useStore((s) => s.showAmmo);
   useEffect(() => {
     if (ammoRef.current) ammoRef.current.visible = showAmmo;
   }, [showAmmo]);
 
   // ── Wheels visibility ──
-  const showWheels = useStore((s) => s.showWheels);
   useEffect(() => {
     if (wheelsRef.current) wheelsRef.current.visible = showWheels;
   }, [showWheels]);
 
   // ── Axes visibility ──
-  const showAxes = useStore((s) => s.showAxes);
   useEffect(() => {
     if (axesRef.current) axesRef.current.visible = showAxes;
   }, [showAxes]);
@@ -236,13 +236,14 @@ export default function Viewport() {
   // ── Camera preset ──
   useEffect(() => {
     if (!camRef.current || !ctrlRef.current) return;
-    const p = PRESETS[cameraPreset];
+    const presets = GARMENT_PRESETS[activeGarment];
+    const p = presets?.[cameraPreset];
     if (!p) return;
     tweenCamera(camRef.current, ctrlRef.current, p.pos, p.tgt);
-  }, [cameraPreset]);
+  }, [cameraPreset, activeGarment]);
 
   function rebuildScene(scene) {
-    // Remove old garment + ammo + wheels
+    // Dispose old objects
     if (garmentRef.current) {
       scene.remove(garmentRef.current);
       garmentRef.current.traverse((c) => {
@@ -263,59 +264,6 @@ export default function Viewport() {
       });
     }
     if (mannequinRef.current) scene.remove(mannequinRef.current);
-
-    // Mannequin
-    const mannequin = buildGownMannequin();
-    mannequin.visible = useStore.getState().showMannequin;
-    scene.add(mannequin);
-    mannequinRef.current = mannequin;
-
-    const state = useStore.getState();
-
-    // Gown group
-    const gown = new THREE.Group();
-    gown.name = 'gown';
-
-    const body = buildGownBody({
-      bodiceHeight: state.bodiceHeight,
-      skirtFlare: state.skirtFlare,
-      slitHeight: state.slitHeight,
-      slitWidth: state.slitWidth,
-      waistWidth: state.waistWidth,
-      bustWidth: state.bustWidth,
-      hipWidth: state.hipWidth,
-      hemHeight: state.hemHeight,
-    });
-    gown.add(body);
-
-    const train = buildGownTrain({
-      trainLength: state.trainLength,
-      trainWidth: state.trainWidth,
-      skirtFlare: state.skirtFlare,
-    });
-    gown.add(train);
-
-    const details = buildGownDetails({
-      bodiceHeight: state.bodiceHeight,
-      skirtFlare: state.skirtFlare,
-    });
-    gown.add(details);
-
-    scene.add(gown);
-    garmentRef.current = gown;
-
-    // Wheels
-    const wheels = buildGownWheels({
-      wheelCount: state.wheelCount,
-      wheelSize: state.wheelSize,
-      skirtFlare: state.skirtFlare,
-      trainLength: state.trainLength,
-    });
-    wheels.visible = state.showWheels;
-    scene.add(wheels);
-    wheelsRef.current = wheels;
-
-    // Medallion
     if (medallionRef.current) {
       scene.remove(medallionRef.current);
       medallionRef.current.traverse((c) => {
@@ -323,32 +271,40 @@ export default function Viewport() {
         if (c.material) c.material.dispose();
       });
     }
-    const medallion = buildFlowerMedallion();
-    medallion.scale.setScalar(state.medallionScale);
-    medallion.position.set(state.medallionX, state.medallionY, 9.8);
-    medallion.visible = state.showMedallion;
-    scene.add(medallion);
-    medallionRef.current = medallion;
 
-    // Force world matrix update before sampling
-    gown.updateMatrixWorld(true);
+    // Build using registry
+    const state = useStore.getState();
+    const builder = GARMENT_BUILDERS[state.activeGarment];
+    if (!builder) return;
 
-    // Ammunition
-    const T = THEMES[state.themeKey] || THEMES.brass;
-    const ammoResult = buildAmmoInstances(gown, {
-      count: state.ammoCount,
-      sizeMin: state.ammoSizeMin,
-      sizeMax: state.ammoSizeMax,
-      spread: state.ammoSpread,
-      flatRatio: state.flatRatio,
-      layerCount: state.layerCount,
-      theme: T,
-    });
+    const result = builder(state);
 
-    if (ammoResult) {
-      ammoResult.mesh.visible = state.showAmmo;
-      scene.add(ammoResult.mesh);
-      ammoRef.current = ammoResult.mesh;
+    // Add to scene
+    scene.add(result.garmentGroup);
+    garmentRef.current = result.garmentGroup;
+
+    scene.add(result.mannequin);
+    mannequinRef.current = result.mannequin;
+
+    if (result.ammoMesh) {
+      scene.add(result.ammoMesh);
+      ammoRef.current = result.ammoMesh;
+    } else {
+      ammoRef.current = null;
+    }
+
+    if (result.wheels) {
+      scene.add(result.wheels);
+      wheelsRef.current = result.wheels;
+    } else {
+      wheelsRef.current = null;
+    }
+
+    if (result.medallion) {
+      scene.add(result.medallion);
+      medallionRef.current = result.medallion;
+    } else {
+      medallionRef.current = null;
     }
   }
 

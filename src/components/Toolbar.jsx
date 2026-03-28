@@ -1,5 +1,5 @@
 /**
- * Toolbar.jsx — Top bar: view presets, wireframe, mannequin toggles.
+ * Toolbar.jsx — Top bar: garment switcher, view presets, toggles, bg shades.
  */
 import { useStore } from '../store/store.js';
 
@@ -31,6 +31,7 @@ function Btn({ label, active, onClick }) {
 
 export default function Toolbar() {
   const {
+    activeGarment, setActiveGarment,
     cameraPreset, setCameraPreset,
     showAmmo, toggleAmmo,
     showMannequin, toggleMannequin,
@@ -42,7 +43,7 @@ export default function Toolbar() {
   } = useStore();
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2"
+    <div className="flex items-center gap-2 px-4 py-2 flex-wrap"
          style={{
            background: 'rgba(3,12,28,.95)',
            borderBottom: '1px solid rgba(0,180,255,.12)',
@@ -51,9 +52,35 @@ export default function Toolbar() {
       <div style={{
         fontFamily: 'Orbitron,monospace', color: '#00c8ff',
         fontSize: '.72rem', fontWeight: 700, letterSpacing: '.09em',
-        marginRight: 16,
+        marginRight: 8,
       }}>
-        GOWN STUDIO
+        GARMENT STUDIO
+      </div>
+
+      {/* Garment switcher */}
+      <div className="flex" style={{
+        border: '1px solid rgba(0,180,255,.25)',
+        borderRadius: 6, overflow: 'hidden', marginRight: 8,
+      }}>
+        <button onClick={() => setActiveGarment('gown')} style={{
+          background: activeGarment === 'gown' ? 'rgba(0,200,255,.25)' : 'transparent',
+          border: 'none', color: activeGarment === 'gown' ? '#00c8ff' : '#5a7a9a',
+          padding: '4px 12px', cursor: 'pointer',
+          fontFamily: 'Orbitron,monospace', fontSize: '.6rem', fontWeight: 700,
+          letterSpacing: '.06em', transition: 'all .15s',
+        }}>
+          GOWN
+        </button>
+        <div style={{ width: 1, background: 'rgba(0,180,255,.25)' }} />
+        <button onClick={() => setActiveGarment('parka')} style={{
+          background: activeGarment === 'parka' ? 'rgba(0,200,255,.25)' : 'transparent',
+          border: 'none', color: activeGarment === 'parka' ? '#00c8ff' : '#5a7a9a',
+          padding: '4px 12px', cursor: 'pointer',
+          fontFamily: 'Orbitron,monospace', fontSize: '.6rem', fontWeight: 700,
+          letterSpacing: '.06em', transition: 'all .15s',
+        }}>
+          PARKA
+        </button>
       </div>
 
       {/* Separator */}
@@ -73,8 +100,12 @@ export default function Toolbar() {
       <Btn label="BULLETS" active={showAmmo} onClick={toggleAmmo} />
       <Btn label="MANNEQUIN" active={showMannequin} onClick={toggleMannequin} />
       <Btn label="WIREFRAME" active={showWireframe} onClick={toggleWireframe} />
-      <Btn label="MEDALLION" active={showMedallion} onClick={toggleMedallion} />
-      <Btn label="WHEELS" active={showWheels} onClick={toggleWheels} />
+      {activeGarment === 'gown' && (
+        <>
+          <Btn label="MEDALLION" active={showMedallion} onClick={toggleMedallion} />
+          <Btn label="WHEELS" active={showWheels} onClick={toggleWheels} />
+        </>
+      )}
       <Btn label="AXES" active={showAxes} onClick={toggleAxes} />
 
       <div style={{ width: 1, height: 20, background: 'rgba(0,180,255,.15)', margin: '0 8px' }} />
@@ -93,7 +124,7 @@ export default function Toolbar() {
       <div className="flex-1" />
 
       <div style={{ color: 'rgba(130,190,255,.4)', fontSize: '.6rem', fontFamily: 'Rajdhani,sans-serif' }}>
-        Bullet Gown Studio v1.0
+        Garment Studio v2.0
       </div>
     </div>
   );
