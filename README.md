@@ -1,22 +1,20 @@
-# Bullet Gown Studio
+# Sea Urchin Parka Studio
 
-Interactive 3D fashion configurator for a high-concept metallic gown built with React and Three.js.
+Interactive 3D fashion configurator for a sea-urchin-inspired parka built with React and Three.js.
 
 Live demo: https://owenheidenreich.github.io/sea-urchin-parka/
 
-![Bullet Gown Studio live interface](docs/screenshots/bullet-gown-studio.png)
-
 ## Reviewer Summary
 
-- **What it is:** a browser-based design studio for inspecting and customizing a 3D couture gown with bullet-inspired surface detailing.
+- **What it is:** a browser-based design studio for inspecting and customizing a spined parka silhouette.
 - **Tech stack:** React, Vite, TypeScript, Three.js, Zustand, Tailwind CSS.
-- **Hosting:** GitHub Pages from the repository's `main` branch.
-- **Status:** public demo is live; the repository also contains related garment-design experiments in branch history.
+- **Hosting:** GitHub Pages from the repository's `main` branch through Actions.
+- **Status:** public demo defaults to the parka; related garment-design experiments remain in branch history.
 
 ## What It Demonstrates
 
 - Real-time 3D rendering with camera controls, lighting, materials, and responsive layout.
-- Configurable garment silhouette and surface treatment controls.
+- Configurable parka body, hood, sleeves, and surface treatment controls.
 - Frontend state management for interactive design tooling.
 - Static deployment workflow suitable for GitHub Pages.
 
